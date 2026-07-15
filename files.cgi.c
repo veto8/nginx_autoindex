@@ -256,11 +256,21 @@ int main(void) {
     else next_date = "date";
 
     /* output */
+    const char *host = getenv("HTTP_HOST");
+    if (!host) host = "localhost";
+    const char *proto = "http";
+    const char *https = getenv("HTTPS");
+    const char *fwd = getenv("HTTP_X_FORWARDED_PROTO");
+    if ((https && strcmp(https, "off")) || (fwd && !strcmp(fwd, "https")))
+        proto = "https";
+    char base_url[1024];
+    snprintf(base_url, sizeof(base_url), "%s://%s", proto, host);
+
     printf("Content-Type: text/html\r\n\r\n");
     printf("<html><head><title>Files</title></head><body>");
 
     printf("<h2>");
-    printf("<a href='/'>/mnt/it/files</a>");
+    printf("<a href='%s/'>/mnt/it/files</a>", base_url);
     if (cur_dir[0]) {
         char tmp[512];
         strncpy(tmp, cur_dir, sizeof(tmp));
@@ -272,7 +282,7 @@ int main(void) {
         for (int i = 0; i < np; i++) {
             if (acc[0]) strcat(acc, "/");
             strcat(acc, parts[i]);
-            printf(" / <a href='/%s/'>%s</a>", acc, parts[i]);
+            printf(" / <a href='%s/%s/'>%s</a>", base_url, acc, parts[i]);
         }
     }
     printf("</h2>");
@@ -286,15 +296,15 @@ int main(void) {
 
     printf("<table border='1' cellpadding='4'>"
            "<tr>"
-           "<th><a href='/%s/%s%s'>Name %s</a></th>"
-           "<th><a href='/%s/%s%s'>Size %s</a></th>"
-           "<th><a href='/%s/%s%s'>Date %s</a></th>"
+           "<th><a href='%s/%s/%s%s'>Name %s</a></th>"
+           "<th><a href='%s/%s/%s%s'>Size %s</a></th>"
+           "<th><a href='%s/%s/%s%s'>Date %s</a></th>"
            "</tr>",
-           cur_dir, cur_dir[0]?"/":"", next_name,
+           base_url, cur_dir, cur_dir[0]?"/":"", next_name,
            !strcmp(g_sort,"name") ? (reverse?"&#9660;":"&#9650;") : "",
-           cur_dir, cur_dir[0]?"/":"", next_size,
+           base_url, cur_dir, cur_dir[0]?"/":"", next_size,
            !strcmp(g_sort,"size") ? (reverse?"&#9660;":"&#9650;") : "",
-           cur_dir, cur_dir[0]?"/":"", next_date,
+           base_url, cur_dir, cur_dir[0]?"/":"", next_date,
            (is_default || !strcmp(g_sort,"date")) ? (is_default?"&#9660;":(reverse?"&#9660;":"&#9650;")) : "");
 
     for (int i = 0; i < count; i++) {
@@ -304,12 +314,12 @@ int main(void) {
                 snprintf(newdir, sizeof(newdir), "%s/%s", cur_dir, entries[i].name);
             else
                 snprintf(newdir, sizeof(newdir), "%s", entries[i].name);
-            printf("<tr><td>[DIR] <a href='/%s/'>%s</a></td><td>%s</td><td>%s</td></tr>",
-                   newdir, entries[i].name, entries[i].size_str, entries[i].time_str);
+            printf("<tr><td>[DIR] <a href='%s/%s/'>%s</a></td><td>%s</td><td>%s</td></tr>",
+                   base_url, newdir, entries[i].name, entries[i].size_str, entries[i].time_str);
         } else {
             char *enc_f = url_encode(entries[i].name);
-            printf("<tr><td><a href='/%s/%s'>%s</a></td><td>%s</td><td>%s</td></tr>",
-                   cur_dir, enc_f, entries[i].name, entries[i].size_str, entries[i].time_str);
+            printf("<tr><td><a href='%s/%s/%s'>%s</a></td><td>%s</td><td>%s</td></tr>",
+                   base_url, cur_dir, enc_f, entries[i].name, entries[i].size_str, entries[i].time_str);
             free(enc_f);
         }
     }
